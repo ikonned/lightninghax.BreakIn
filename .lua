@@ -337,7 +337,7 @@ local function createESP(object, color)
     box.Name = "ESP_BOX"
     box.Adornee = anchor
     box.Color3 = color
-    box.Transparency = 0.75
+    box.Transparency = 0.48
     box.AlwaysOnTop = true
     box.ZIndex = 10
     box.Size = Vector3.new(1, 1, 1)
