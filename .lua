@@ -762,39 +762,6 @@ local function smoothCycle(root, runningCheck, onFinish)
     end)
 end
 
-	local objects = getColorTargets(root)
-
-	task.spawn(function()
-		while runningCheck() and root and root.Parent do
-			for i = 0, 1, 0.01 do
-				if not runningCheck() or not root or not root.Parent then
-					if onFinish then onFinish() end
-					return
-				end
-
-				local c
-				if i < 0.33 then
-					c = Color3.new(1,1,1):Lerp(Color3.new(1,0,0), i/0.33)
-				elseif i < 0.66 then
-					c = Color3.new(1,0,0):Lerp(Color3.new(1,1,1), (i-0.33)/0.33)
-				else
-					c = Color3.new(1,1,1):Lerp(Color3.fromRGB(60,30,10), (i-0.66)/0.34)
-				end
-
-				for _, p in ipairs(objects) do
-					if p and p.Parent then
-						p.Color = c
-					end
-				end
-
-				task.wait(0.05)
-			end
-		end
-
-		if onFinish then onFinish() end
-	end)
-end
-
 ESPTab:CreateButton({
 	Name = "Fridge Chams",
 	Callback = function()
