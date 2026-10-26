@@ -835,13 +835,6 @@ ExploitsTab:CreateButton({
     Target:FireServer()
 end
 
-        Rayfield:Notify({
-            Title = "SERVER CRASHING",
-            Content = "Execute Successful",
-            Duration = 9.5,
-            Image = 10448639430,
-        })
-
     end,
 })
 
