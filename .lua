@@ -337,7 +337,7 @@ local function createESP(object, color)
     box.Name = "ESP_BOX"
     box.Adornee = anchor
     box.Color3 = color
-    box.Transparency = 0.48
+    box.Transparency = 0.75
     box.AlwaysOnTop = true
     box.ZIndex = 10
     box.Size = Vector3.new(1, 1, 1)
@@ -394,7 +394,7 @@ RunService.Heartbeat:Connect(function()
 
         if success and data.box and data.box.Parent then
             data.box.CFrame = anchor.CFrame:ToObjectSpace(boundsCFrame)
-            data.box.Size = boundsSize
+            data.box.Size = data.customSize or boundsSize
             data.box.Color3 = data.color
         end
     end
@@ -540,6 +540,124 @@ ESPTab:CreateToggle({
                 task.wait(0.5)
             end
         end)
+    end
+})
+
+---------------------------------------------------
+-- BAD GUYS ESP: BLACK BOX
+-- UNCLE PETE ESP: GREEN BOX
+---------------------------------------------------
+
+local BAD_GUY_COLOR = Color3.fromRGB(0, 0, 0)
+local UNCLE_PETE_COLOR = Color3.fromRGB(0, 255, 0)
+
+local badGuysESPEnabled = false
+local unclePeteESPEnabled = false
+
+local badGuyTarget
+local unclePeteTarget
+
+local function createLargeTargetESP(object, color, boxSize)
+    if not object or not object:IsA("BasePart") then
+        return
+    end
+
+    createESP(object, color)
+
+    local data = espObjects[object]
+    if data and data.box then
+        data.box.Size = boxSize
+        data.box.Transparency = 0.2
+        data.customSize = boxSize
+    end
+end
+
+ESPTab:CreateToggle({
+    Name = "Bad Guys ESP",
+    CurrentValue = false,
+
+    Callback = function(value)
+        badGuysESPEnabled = value
+
+        if not value then
+            if badGuyTarget then
+                removeESP(badGuyTarget)
+                badGuyTarget = nil
+            end
+            return
+        end
+
+        task.spawn(function()
+            while badGuysESPEnabled do
+                local badGuys = workspace:FindFirstChild("BadGuys")
+                local target = badGuys and badGuys:FindFirstChild(" ")
+
+                local torso = target and target:FindFirstChild("HumanoidRootPart")
+
+                if torso ~= badGuyTarget then
+                    if badGuyTarget then
+                        removeESP(badGuyTarget)
+                    end
+
+                    badGuyTarget = torso
+                end
+
+                if torso then
+                    createLargeTargetESP(
+                        torso,
+                        BAD_GUY_COLOR,
+                        Vector3.new(8, 10, 5)
+                    )
+                end
+
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Uncle Pete ESP",
+    CurrentValue = false,
+
+    Callback = function(value)
+        unclePeteESPEnabled = value
+
+        if not value then
+            if unclePeteTarget then
+                removeESP(unclePeteTarget)
+                unclePeteTarget = nil
+            end
+            return
+        end
+
+        task.spawn(function()
+            while unclePeteESPEnabled do
+                local neighbours = workspace:FindFirstChild("Neighbours")
+                local crazy = neighbours and neighbours:FindFirstChild("")
+
+                local fatherTime = crazy and crazy:FindFirstChild("FatherTime")
+                local handle = fatherTime and fatherTime:FindFirstChild("Handle")
+
+                if handle ~= unclePeteTarget then
+                    if unclePeteTarget then
+                        removeESP(unclePeteTarget)
+                    end
+
+                    unclePeteTarget = handle
+                end
+
+                if handle and handle:IsA("BasePart") then
+                    createLargeTargetESP(
+                        handle,
+                        UNCLE_PETE_COLOR,
+                        Vector3.new(8, 10, 5)
+                    )
+                end
+
+                task.wait(0.5)
+            end
+        end
     end
 })
 
@@ -826,7 +944,7 @@ ExploitsTab:CreateButton({
 })
 
 ExploitsTab:CreateButton({
-    Name = "Inf Loop + Befriend Cat [ CRASHES SERVER ]",
+    Name = "Inf Loop + Befriend Cat [ CRASHES/LAGS SERVER ]",
     Callback = function()
 
     local Target = game:GetService("ReplicatedStorage").RemoteEvents.Cattery
@@ -916,6 +1034,26 @@ ExploitsTab:CreateButton({
             Image = 11924266902,
         })
 
+    end,
+})
+
+ExploitsTab:CreateButton({
+    Name = "Destroy Everything [Final Ending]",
+    Callback = function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local house = workspace:WaitForChild("LarrysHouse")
+        local mansionHit = ReplicatedStorage
+            :WaitForChild("RemoteEvents")
+            :WaitForChild("MansionHit")
+
+        for pass = 1, 3 do
+            for _, object in ipairs(house:GetDescendants()) do
+                if object:IsA("BasePart") or object:IsA("Model") then
+                    mansionHit:FireServer(object)
+                    task.wait(0.1)
+                end
+            end
+        end
     end,
 })
 
