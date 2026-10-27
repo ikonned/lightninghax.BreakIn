@@ -543,7 +543,123 @@ ESPTab:CreateToggle({
     end
 })
 
+---------------------------------------------------
+-- BAD GUYS ESP: BLACK BOX
+-- UNCLE PETE ESP: GREEN BOX
+---------------------------------------------------
 
+local BAD_GUY_COLOR = Color3.fromRGB(0, 0, 0)
+local UNCLE_PETE_COLOR = Color3.fromRGB(0, 255, 0)
+
+local badGuysESPEnabled = false
+local unclePeteESPEnabled = false
+
+local badGuyTarget
+local unclePeteTarget
+
+local function createLargeTargetESP(object, color, boxSize)
+    if not object or not object:IsA("BasePart") then
+        return
+    end
+
+    createESP(object, color)
+
+    local data = espObjects[object]
+    if data and data.box then
+        data.box.Size = boxSize
+        data.box.Transparency = 0.2
+        data.customSize = boxSize
+    end
+end
+
+ESPTab:CreateToggle({
+    Name = "Bad Guys ESP",
+    CurrentValue = false,
+
+    Callback = function(value)
+        badGuysESPEnabled = value
+
+        if not value then
+            if badGuyTarget then
+                removeESP(badGuyTarget)
+                badGuyTarget = nil
+            end
+            return
+        end
+
+        task.spawn(function()
+            while badGuysESPEnabled do
+                local badGuys = workspace:FindFirstChild("BadGuys")
+                local target = badGuys and badGuys:FindFirstChild(" ")
+
+                local torso = target and target:FindFirstChild("HumanoidRootPart")
+
+                if torso ~= badGuyTarget then
+                    if badGuyTarget then
+                        removeESP(badGuyTarget)
+                    end
+
+                    badGuyTarget = torso
+                end
+
+                if torso then
+                    createLargeTargetESP(
+                        torso,
+                        BAD_GUY_COLOR,
+                        Vector3.new(8, 10, 5)
+                    )
+                end
+
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Uncle Pete ESP",
+    CurrentValue = false,
+
+    Callback = function(value)
+        unclePeteESPEnabled = value
+
+        if not value then
+            if unclePeteTarget then
+                removeESP(unclePeteTarget)
+                unclePeteTarget = nil
+            end
+            return
+        end
+
+        task.spawn(function()
+            while unclePeteESPEnabled do
+                local neighbours = workspace:FindFirstChild("Neighbours")
+                local crazy = neighbours and neighbours:FindFirstChild("")
+
+                local fatherTime = crazy and crazy:FindFirstChild("FatherTime")
+                local handle = fatherTime and fatherTime:FindFirstChild("Handle")
+
+                if handle ~= unclePeteTarget then
+                    if unclePeteTarget then
+                        removeESP(unclePeteTarget)
+                    end
+
+                    unclePeteTarget = handle
+                end
+
+                if handle and handle:IsA("BasePart") then
+                    createLargeTargetESP(
+                        handle,
+                        UNCLE_PETE_COLOR,
+                        Vector3.new(8, 10, 5)
+                    )
+                end
+
+                task.wait(0.5)
+            end
+        end
+    end
+})
 
 ---------------------------------------------------
 -- VAULT ESP: BLUE BOX
