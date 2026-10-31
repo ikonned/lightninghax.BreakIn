@@ -543,6 +543,7 @@ ESPTab:CreateToggle({
     end
 })
 
+
 ---------------------------------------------------
 -- BAD GUYS ESP: BLACK BOX
 -- UNCLE PETE ESP: GREEN BOX
@@ -551,115 +552,311 @@ ESPTab:CreateToggle({
 local BAD_GUY_COLOR = Color3.fromRGB(0, 0, 0)
 local UNCLE_PETE_COLOR = Color3.fromRGB(0, 255, 0)
 
+local BAD_GUY_BOX_SIZE = Vector3.new(8, 10, 5)
+local UNCLE_PETE_BOX_SIZE = Vector3.new(8, 10, 5)
+
 local badGuysESPEnabled = false
 local unclePeteESPEnabled = false
 
-local badGuyTarget
-local unclePeteTarget
+local badGuysESPGeneration = 0
+local unclePeteESPGeneration = 0
+
+local trackedBadGuys = {}
+local unclePeteTarget = nil
+
+---------------------------------------------------
+-- LARGE TARGET ESP HELPER
+---------------------------------------------------
 
 local function createLargeTargetESP(object, color, boxSize)
+
     if not object or not object:IsA("BasePart") then
+        return
+    end
+
+    if not object.Parent then
         return
     end
 
     createESP(object, color)
 
     local data = espObjects[object]
+
     if data and data.box then
+        data.box.Color3 = color
         data.box.Size = boxSize
         data.box.Transparency = 0.2
+        data.box.AlwaysOnTop = true
+
         data.customSize = boxSize
+        data.color = color
     end
 end
+
+---------------------------------------------------
+-- CLEANUP HELPER
+---------------------------------------------------
+
+local function clearTargetTable(targetTable)
+
+    for target in pairs(targetTable) do
+        removeESP(target)
+        targetTable[target] = nil
+    end
+
+end
+
+---------------------------------------------------
+-- FIND BAD GUY TARGETS
+---------------------------------------------------
+
+local function getBadGuyTargets()
+
+    local targets = {}
+
+    local badGuysFolder =
+        workspace:FindFirstChild("BadGuys", true)
+
+    if not badGuysFolder then
+        return targets
+    end
+
+    local function addTarget(candidate)
+
+        if not candidate then
+            return
+        end
+
+        if candidate:IsA("BasePart") then
+            targets[candidate] = true
+            return
+        end
+
+        if not candidate:IsA("Model") then
+            return
+        end
+
+        local humanoid =
+            candidate:FindFirstChildOfClass("Humanoid")
+            or candidate:FindFirstChildWhichIsA("Humanoid", true)
+
+        if not humanoid then
+            return
+        end
+
+        local root =
+            candidate:FindFirstChild("HumanoidRootPart", true)
+            or candidate.PrimaryPart
+
+        if root and root:IsA("BasePart") then
+            targets[root] = true
+        end
+
+    end
+
+    -- Check direct children.
+    for _, candidate in ipairs(badGuysFolder:GetChildren()) do
+        addTarget(candidate)
+    end
+
+    -- Check nested enemy models too.
+    for _, candidate in ipairs(badGuysFolder:GetDescendants()) do
+
+        if candidate:IsA("Model") then
+            addTarget(candidate)
+        end
+
+    end
+
+    return targets
+
+end
+
+---------------------------------------------------
+-- BAD GUYS ESP TOGGLE
+---------------------------------------------------
 
 ESPTab:CreateToggle({
     Name = "Bad Guys ESP",
     CurrentValue = false,
 
     Callback = function(value)
+
         badGuysESPEnabled = value
+        badGuysESPGeneration += 1
+
+        local generation = badGuysESPGeneration
 
         if not value then
-            if badGuyTarget then
-                removeESP(badGuyTarget)
-                badGuyTarget = nil
-            end
+            clearTargetTable(trackedBadGuys)
             return
         end
 
         task.spawn(function()
-            while badGuysESPEnabled do
-                local badGuys = workspace:FindFirstChild("BadGuys")
-                local target = badGuys and badGuys:FindFirstChild(" ")
 
-                local torso = target and target:FindFirstChild("HumanoidRootPart")
+            while badGuysESPEnabled
+                and generation == badGuysESPGeneration do
 
-                if torso ~= badGuyTarget then
-                    if badGuyTarget then
-                        removeESP(badGuyTarget)
+                local foundTargets = getBadGuyTargets()
+
+                -- Remove targets that have disappeared.
+                for target in pairs(trackedBadGuys) do
+
+                    if not foundTargets[target] then
+                        removeESP(target)
+                        trackedBadGuys[target] = nil
                     end
 
-                    badGuyTarget = torso
                 end
 
-                if torso then
-                    createLargeTargetESP(
-                        torso,
-                        BAD_GUY_COLOR,
-                        Vector3.new(8, 10, 5)
-                    )
+                -- Create or refresh boxes for detected targets.
+                for target in pairs(foundTargets) do
+
+                    if target and target.Parent then
+
+                        createLargeTargetESP(
+                            target,
+                            BAD_GUY_COLOR,
+                            BAD_GUY_BOX_SIZE
+                        )
+
+                        trackedBadGuys[target] = true
+
+                    end
+
                 end
 
                 task.wait(0.5)
+
             end
+
         end)
+
     end
 })
+
+---------------------------------------------------
+-- FIND UNCLE PETE TARGET
+---------------------------------------------------
+
+local function findUnclePeteTarget()
+
+    local neighbours =
+        workspace:FindFirstChild("Neighbours", true)
+
+    if not neighbours then
+        return nil
+    end
+
+    -- Find FatherTime regardless of its folder hierarchy.
+    local fatherTime = nil
+
+    for _, object in ipairs(neighbours:GetDescendants()) do
+
+        if object.Name:lower() == "fathertime" then
+            fatherTime = object
+            break
+        end
+
+    end
+
+    if not fatherTime then
+        return nil
+    end
+
+    -- FatherTime may itself be a BasePart.
+    if fatherTime:IsA("BasePart") then
+        return fatherTime
+    end
+
+    -- Look for its Handle.
+    local handle =
+        fatherTime:FindFirstChild("Handle", true)
+
+    if handle and handle:IsA("BasePart") then
+        return handle
+    end
+
+    -- Fallback: find another BasePart inside FatherTime.
+    local fallback =
+        fatherTime:FindFirstChildWhichIsA("BasePart", true)
+
+    if fallback then
+        return fallback
+    end
+
+    return nil
+
+end
+
+---------------------------------------------------
+-- UNCLE PETE ESP CLEANUP
+---------------------------------------------------
+
+local function clearUnclePeteESP()
+
+    if unclePeteTarget then
+        removeESP(unclePeteTarget)
+        unclePeteTarget = nil
+    end
+
+end
+
+---------------------------------------------------
+-- UNCLE PETE ESP TOGGLE
+---------------------------------------------------
 
 ESPTab:CreateToggle({
     Name = "Uncle Pete ESP",
     CurrentValue = false,
 
     Callback = function(value)
+
         unclePeteESPEnabled = value
+        unclePeteESPGeneration += 1
+
+        local generation = unclePeteESPGeneration
 
         if not value then
-            if unclePeteTarget then
-                removeESP(unclePeteTarget)
-                unclePeteTarget = nil
-            end
+            clearUnclePeteESP()
             return
         end
 
         task.spawn(function()
-            while unclePeteESPEnabled do
-                local neighbours = workspace:FindFirstChild("Neighbours")
-                local crazy = neighbours and neighbours:FindFirstChild("")
 
-                local fatherTime = crazy and crazy:FindFirstChild("FatherTime")
-                local handle = fatherTime and fatherTime:FindFirstChild("Handle")
+            while unclePeteESPEnabled
+                and generation == unclePeteESPGeneration do
 
+                local handle = findUnclePeteTarget()
+
+                -- Detect when Uncle Pete's target changes.
                 if handle ~= unclePeteTarget then
-                    if unclePeteTarget then
-                        removeESP(unclePeteTarget)
-                    end
 
+                    clearUnclePeteESP()
                     unclePeteTarget = handle
+
                 end
 
-                if handle and handle:IsA("BasePart") then
+                -- Create or refresh the green box.
+                if handle and handle.Parent then
+
                     createLargeTargetESP(
                         handle,
                         UNCLE_PETE_COLOR,
-                        Vector3.new(8, 10, 5)
+                        UNCLE_PETE_BOX_SIZE
                     )
+
                 end
 
                 task.wait(0.5)
+
             end
-        end
+
+        end)
+
     end
 })
+
 
 ---------------------------------------------------
 -- VAULT ESP: BLUE BOX
