@@ -1193,6 +1193,25 @@ ExploitsTab:CreateButton({
 })
 
 ExploitsTab:CreateButton({
+    Name = "Buy Pie Dish [$40]",
+    Callback = function()
+
+        game:GetService("ReplicatedStorage")
+            :WaitForChild("RemoteEvents")
+            :WaitForChild("BuyItem")
+            :FireServer("Pan")
+
+        Rayfield:Notify({
+            Title = "Pan Purchase Requested",
+            Content = "Executed Successfully",
+            Duration = 5,
+            Image = 14380950090,
+        })
+
+    end
+})
+
+ExploitsTab:CreateButton({
     Name = "Open Vault",
     Callback = function()
 
